@@ -1,14 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane xmlns="http://javafx.com/javafx"
+<BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="CONTROLLER_NAME"
-            prefHeight="400.0" prefWidth="600.0">
+            fx:controller="com.uam.facturationapp.controller.MainMenuController"
+            prefHeight="600.0" prefWidth="900.0">
 
-</AnchorPane>
+    <top>
+        <VBox>
+            <MenuBar>
+                <Menu text="Archivo">
+                    <MenuItem fx:id="exitMenuItem" text="Salir" onAction="#onExit"/>
+                </Menu>
+                <Menu text="Catálogos">
+                    <MenuItem fx:id="productsMenuItem" text="Productos" onAction="#onOpenProducts"/>
+                </Menu>
+            </MenuBar>
+
+            <ToolBar>
+                <Button fx:id="productsButton" text="Productos" onAction="#onOpenProducts"/>
+                <Separator orientation="VERTICAL"/>
+                <Button fx:id="exitButton" text="Salir" onAction="#onExit"/>
+            </ToolBar>
+        </VBox>
+    </top>
+
+    <center>
+        <Label text="Sistema de facturación" style="-fx-font-size: 28px; -fx-font-weight: bold;"/>
+    </center>
+</BorderPane>

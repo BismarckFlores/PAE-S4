@@ -9,10 +9,15 @@ import javafx.stage.Stage;
 public class FacturationApplication extends Application {
     @Override
     public void start(Stage stage) throws Exception {
-        Parent root = new FXMLLoader(FacturationApplication.class.getResource("/com/uam/facturationapp/fxml/category-view.fxml")).load();
+        Parent root = new FXMLLoader(FacturationApplication.class.getResource(
+                "/com/uam/facturationapp/fxml/main-menu.fxml")).load();
 
-        stage.setTitle("Facturación");
-        stage.setScene(new Scene(root, 600, 400));
+        stage.setTitle("Sistema de facturación");
+        stage.setScene(new Scene(root, 900, 600));
         stage.show();
+    }
+
+    public static void main(String[] args) {
+        launch(args);
     }
 }
