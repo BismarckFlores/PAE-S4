@@ -11,4 +11,9 @@ public class Position {
     private Integer id;
     private String name;
     private String desc;
+
+    @Override
+    public String toString() {
+        return name;
+    }
 }
