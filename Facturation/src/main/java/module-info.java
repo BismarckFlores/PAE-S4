@@ -5,6 +5,7 @@ module com.uam.facturationapp {
 
     opens com.uam.facturationapp.application to javafx.fxml;
     opens com.uam.facturationapp.controller to javafx.fxml;
+    opens com.uam.facturationapp.model to javafx.base;
 
     exports com.uam.facturationapp;
     exports com.uam.facturationapp.application;
