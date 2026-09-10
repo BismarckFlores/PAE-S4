@@ -1,10 +1,11 @@
 package com.uam.facturationapp.controller;
 
+import com.uam.facturationapp.data.DataStore;
 import com.uam.facturationapp.model.Category;
 import com.uam.facturationapp.model.Product;
+import com.uam.facturationapp.util.Mensajes;
 import com.uam.facturationapp.util.ScreenManager;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -33,16 +34,12 @@ public class ProductController {
     @FXML private TableColumn<Product, Integer> colExistencia;
     @FXML private TableColumn<Product, Boolean> colActivo;
 
-    // Lista temporal: se reemplazará por la base de datos cuando se aborde JDBC.
-    private final ObservableList<Product> productos = FXCollections.observableArrayList();
     private String rutaImagen;
 
     @FXML
     private void initialize() {
-        cmbCategoria.setItems(FXCollections.observableArrayList(
-                new Category(1, "Alimentos", true),
-                new Category(2, "Bebidas", true),
-                new Category(3, "Limpieza", true)));
+        // Solo se ofrecen las categorías activas registradas en la vista Categorías.
+        cmbCategoria.setItems(new FilteredList<>(DataStore.categorias(), Category::isActive));
 
         colCodigo.setCellValueFactory(new PropertyValueFactory<>("code"));
         colNombre.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -51,7 +48,7 @@ public class ProductController {
         colExistencia.setCellValueFactory(new PropertyValueFactory<>("stock"));
         colActivo.setCellValueFactory(new PropertyValueFactory<>("active"));
 
-        tblProductos.setItems(productos);
+        tblProductos.setItems(DataStore.productos());
         chkActivo.setSelected(true);
     }
 
@@ -95,12 +92,13 @@ public class ProductController {
         }
 
         String codigo = txtCodigo.getText().trim();
-        if (productos.stream().anyMatch(p -> p.getCode().equalsIgnoreCase(codigo))) {
+        if (DataStore.productos().stream().anyMatch(p -> p.getCode().equalsIgnoreCase(codigo))) {
             mensaje(Alert.AlertType.WARNING, "Ya existe un producto con ese código.");
             return;
         }
 
-        productos.add(new Product(null, codigo, txtNombre.getText().trim(), cmbCategoria.getValue(),
+        DataStore.productos().add(new Product(DataStore.siguienteId(DataStore.productos(), Product::getId),
+                codigo, txtNombre.getText().trim(), cmbCategoria.getValue(),
                 precio, existencia, rutaImagen, chkActivo.isSelected()));
         mensaje(Alert.AlertType.INFORMATION, "Producto agregado correctamente.");
         limpiar();
@@ -123,8 +121,6 @@ public class ProductController {
     }
 
     private void mensaje(Alert.AlertType tipo, String texto) {
-        Alert alerta = new Alert(tipo, texto, ButtonType.OK);
-        alerta.initOwner(txtCodigo.getScene().getWindow());
-        alerta.showAndWait();
+        Mensajes.mostrar(txtCodigo, tipo, texto);
     }
 }
