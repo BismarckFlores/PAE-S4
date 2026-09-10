@@ -2,6 +2,7 @@ package com.uam.facturationapp.controller;
 
 import com.uam.facturationapp.model.Category;
 import com.uam.facturationapp.model.Product;
+import com.uam.facturationapp.util.ScreenManager;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -10,121 +11,120 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
-import javafx.stage.Stage;
 
 import java.io.File;
 import java.math.BigDecimal;
 
 public class ProductController {
 
-    @FXML private TextField codeField;
-    @FXML private TextField nameField;
-    @FXML private ComboBox<Category> categoryCombo;
-    @FXML private TextField priceField;
-    @FXML private TextField stockField;
-    @FXML private CheckBox activeCheck;
-    @FXML private ImageView productImage;
+    @FXML private TextField txtCodigo;
+    @FXML private TextField txtNombre;
+    @FXML private ComboBox<Category> cmbCategoria;
+    @FXML private TextField txtPrecio;
+    @FXML private TextField txtExistencia;
+    @FXML private CheckBox chkActivo;
+    @FXML private ImageView imgProducto;
 
-    @FXML private TableView<Product> productTable;
-    @FXML private TableColumn<Product, String> codeColumn;
-    @FXML private TableColumn<Product, String> nameColumn;
-    @FXML private TableColumn<Product, Category> categoryColumn;
-    @FXML private TableColumn<Product, BigDecimal> priceColumn;
-    @FXML private TableColumn<Product, Integer> stockColumn;
-    @FXML private TableColumn<Product, Boolean> activeColumn;
+    @FXML private TableView<Product> tblProductos;
+    @FXML private TableColumn<Product, String> colCodigo;
+    @FXML private TableColumn<Product, String> colNombre;
+    @FXML private TableColumn<Product, Category> colCategoria;
+    @FXML private TableColumn<Product, BigDecimal> colPrecio;
+    @FXML private TableColumn<Product, Integer> colExistencia;
+    @FXML private TableColumn<Product, Boolean> colActivo;
 
     // Lista temporal: se reemplazará por la base de datos cuando se aborde JDBC.
-    private final ObservableList<Product> products = FXCollections.observableArrayList();
-    private String imagePath;
+    private final ObservableList<Product> productos = FXCollections.observableArrayList();
+    private String rutaImagen;
 
     @FXML
     private void initialize() {
-        categoryCombo.setItems(FXCollections.observableArrayList(
+        cmbCategoria.setItems(FXCollections.observableArrayList(
                 new Category(1, "Alimentos", true),
                 new Category(2, "Bebidas", true),
                 new Category(3, "Limpieza", true)));
 
-        codeColumn.setCellValueFactory(new PropertyValueFactory<>("code"));
-        nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
-        categoryColumn.setCellValueFactory(new PropertyValueFactory<>("category"));
-        priceColumn.setCellValueFactory(new PropertyValueFactory<>("salePrice"));
-        stockColumn.setCellValueFactory(new PropertyValueFactory<>("stock"));
-        activeColumn.setCellValueFactory(new PropertyValueFactory<>("active"));
+        colCodigo.setCellValueFactory(new PropertyValueFactory<>("code"));
+        colNombre.setCellValueFactory(new PropertyValueFactory<>("name"));
+        colCategoria.setCellValueFactory(new PropertyValueFactory<>("category"));
+        colPrecio.setCellValueFactory(new PropertyValueFactory<>("salePrice"));
+        colExistencia.setCellValueFactory(new PropertyValueFactory<>("stock"));
+        colActivo.setCellValueFactory(new PropertyValueFactory<>("active"));
 
-        productTable.setItems(products);
-        activeCheck.setSelected(true);
+        tblProductos.setItems(productos);
+        chkActivo.setSelected(true);
     }
 
     @FXML
-    private void onSelectImage() {
+    private void seleccionarImagen() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Seleccionar imagen");
         chooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("Imágenes", "*.png", "*.jpg", "*.jpeg"));
 
-        File file = chooser.showOpenDialog(codeField.getScene().getWindow());
-        if (file != null) {
-            imagePath = file.toURI().toString();
-            productImage.setImage(new Image(imagePath));
+        File archivo = chooser.showOpenDialog(txtCodigo.getScene().getWindow());
+        if (archivo != null) {
+            rutaImagen = archivo.toURI().toString();
+            imgProducto.setImage(new Image(rutaImagen));
         }
     }
 
     @FXML
-    private void onSave() {
-        if (codeField.getText().isBlank() || nameField.getText().isBlank()
-                || priceField.getText().isBlank() || stockField.getText().isBlank()
-                || categoryCombo.getValue() == null) {
-            showMessage(Alert.AlertType.WARNING, "Complete los campos obligatorios.");
+    private void guardar() {
+        if (txtCodigo.getText().isBlank() || txtNombre.getText().isBlank()
+                || txtPrecio.getText().isBlank() || txtExistencia.getText().isBlank()
+                || cmbCategoria.getValue() == null) {
+            mensaje(Alert.AlertType.WARNING, "Complete los campos obligatorios.");
             return;
         }
 
-        BigDecimal price;
-        int stock;
+        BigDecimal precio;
+        int existencia;
         try {
-            price = new BigDecimal(priceField.getText().trim());
-            stock = Integer.parseInt(stockField.getText().trim());
+            precio = new BigDecimal(txtPrecio.getText().trim());
+            existencia = Integer.parseInt(txtExistencia.getText().trim());
         } catch (NumberFormatException e) {
-            showMessage(Alert.AlertType.ERROR, "Precio o existencia no válidos.");
+            mensaje(Alert.AlertType.ERROR, "Precio o existencia no válidos.");
             return;
         }
 
-        if (price.signum() <= 0 || stock < 0) {
-            showMessage(Alert.AlertType.WARNING,
+        if (precio.signum() <= 0 || existencia < 0) {
+            mensaje(Alert.AlertType.WARNING,
                     "El precio debe ser mayor que cero y la existencia no puede ser negativa.");
             return;
         }
 
-        String code = codeField.getText().trim();
-        if (products.stream().anyMatch(p -> p.getCode().equalsIgnoreCase(code))) {
-            showMessage(Alert.AlertType.WARNING, "Ya existe un producto con ese código.");
+        String codigo = txtCodigo.getText().trim();
+        if (productos.stream().anyMatch(p -> p.getCode().equalsIgnoreCase(codigo))) {
+            mensaje(Alert.AlertType.WARNING, "Ya existe un producto con ese código.");
             return;
         }
 
-        products.add(new Product(null, code, nameField.getText().trim(), categoryCombo.getValue(),
-                price, stock, imagePath, activeCheck.isSelected()));
-        showMessage(Alert.AlertType.INFORMATION, "Producto agregado correctamente.");
-        clearForm();
+        productos.add(new Product(null, codigo, txtNombre.getText().trim(), cmbCategoria.getValue(),
+                precio, existencia, rutaImagen, chkActivo.isSelected()));
+        mensaje(Alert.AlertType.INFORMATION, "Producto agregado correctamente.");
+        limpiar();
     }
 
     @FXML
-    private void onClose() {
-        ((Stage) codeField.getScene().getWindow()).close();
+    private void cerrar() {
+        ScreenManager.mostrarInicio();
     }
 
-    private void clearForm() {
-        codeField.clear();
-        nameField.clear();
-        priceField.clear();
-        stockField.clear();
-        categoryCombo.getSelectionModel().clearSelection();
-        activeCheck.setSelected(true);
-        productImage.setImage(null);
-        imagePath = null;
+    private void limpiar() {
+        txtCodigo.clear();
+        txtNombre.clear();
+        txtPrecio.clear();
+        txtExistencia.clear();
+        cmbCategoria.getSelectionModel().clearSelection();
+        chkActivo.setSelected(true);
+        imgProducto.setImage(null);
+        rutaImagen = null;
     }
 
-    private void showMessage(Alert.AlertType type, String text) {
-        Alert alert = new Alert(type, text, ButtonType.OK);
-        alert.initOwner(codeField.getScene().getWindow());
-        alert.showAndWait();
+    private void mensaje(Alert.AlertType tipo, String texto) {
+        Alert alerta = new Alert(tipo, texto, ButtonType.OK);
+        alerta.initOwner(txtCodigo.getScene().getWindow());
+        alerta.showAndWait();
     }
 }

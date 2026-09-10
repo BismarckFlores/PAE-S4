@@ -1,30 +1,38 @@
 package com.uam.facturationapp.util;
 
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
+import javafx.scene.layout.BorderPane;
 
 import java.io.IOException;
 import java.net.URL;
 
 public final class ScreenManager {
 
+    // Todas las vistas se muestran en el centro del menú principal: una sola ventana.
+    private static BorderPane contenedor;
+    private static Node inicio;
+
     private ScreenManager() {
     }
 
-    public static void openWindow(String resource, String title) throws IOException {
-        URL url = ScreenManager.class.getResource(resource);
+    public static void setContenedor(BorderPane contenedorPrincipal) {
+        contenedor = contenedorPrincipal;
+        inicio = contenedorPrincipal.getCenter();
+    }
+
+    public static void mostrarVista(String recurso) throws IOException {
+        URL url = ScreenManager.class.getResource(recurso);
         if (url == null) {
-            throw new IOException("FXML no encontrado: " + resource);
+            throw new IOException("FXML no encontrado: " + recurso);
         }
 
-        Parent root = new FXMLLoader(url).load();
-        Stage stage = new Stage();
-        stage.setTitle(title);
-        stage.setScene(new Scene(root));
-        stage.initModality(Modality.APPLICATION_MODAL);
-        stage.showAndWait();
+        Parent vista = new FXMLLoader(url).load();
+        contenedor.setCenter(vista);
+    }
+
+    public static void mostrarInicio() {
+        contenedor.setCenter(inicio);
     }
 }

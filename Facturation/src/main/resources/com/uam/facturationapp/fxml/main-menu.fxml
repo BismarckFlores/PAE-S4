@@ -5,6 +5,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
+            fx:id="contenedor"
             fx:controller="com.uam.facturationapp.controller.MainMenuController"
             prefHeight="600.0" prefWidth="900.0">
 
@@ -12,17 +13,17 @@
         <VBox>
             <MenuBar>
                 <Menu text="Archivo">
-                    <MenuItem fx:id="exitMenuItem" text="Salir" onAction="#onExit"/>
+                    <MenuItem fx:id="mnuSalir" text="Salir" onAction="#salir"/>
                 </Menu>
                 <Menu text="Catálogos">
-                    <MenuItem fx:id="productsMenuItem" text="Productos" onAction="#onOpenProducts"/>
+                    <MenuItem fx:id="mnuProductos" text="Productos" onAction="#abrirProductos"/>
                 </Menu>
             </MenuBar>
 
             <ToolBar>
-                <Button fx:id="productsButton" text="Productos" onAction="#onOpenProducts"/>
+                <Button fx:id="btnProductos" text="Productos" onAction="#abrirProductos"/>
                 <Separator orientation="VERTICAL"/>
-                <Button fx:id="exitButton" text="Salir" onAction="#onExit"/>
+                <Button fx:id="btnSalir" text="Salir" onAction="#salir"/>
             </ToolBar>
         </VBox>
     </top>
