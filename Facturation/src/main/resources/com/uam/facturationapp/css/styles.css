@@ -1,0 +1,27 @@
+/* Botones de la barra de herramientas: solo icono; el nombre va en el tooltip. */
+.boton-icono {
+    -fx-background-color: transparent;
+    -fx-background-radius: 4;
+    -fx-padding: 6;
+    -fx-cursor: hand;
+}
+
+.boton-icono:hover {
+    -fx-background-color: #dfe6ea;
+}
+
+.boton-icono:pressed {
+    -fx-background-color: #c9d3d9;
+}
+
+.boton-icono .icono {
+    -fx-fill: #37474f;
+}
+
+.boton-icono:hover .icono {
+    -fx-fill: #1565c0;
+}
+
+#btnSalir:hover .icono {
+    -fx-fill: #c62828;
+}
