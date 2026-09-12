@@ -53,13 +53,20 @@
                     <StackPane prefWidth="160.0" prefHeight="160.0" style="-fx-border-color: #bbbbbb;">
                         <ImageView fx:id="imgProducto" fitWidth="150.0" fitHeight="150.0" preserveRatio="true"/>
                     </StackPane>
-                    <Button fx:id="btnImagen" text="Seleccionar imagen..." onAction="#seleccionarImagen"/>
+                    <Button fx:id="btnImagen" text="Seleccionar imagen..." onAction="#seleccionarImagen"
+                            maxWidth="Infinity"/>
+                    <Button fx:id="btnQuitarImagen" text="Quitar imagen" onAction="#quitarImagen"
+                            maxWidth="Infinity"/>
                 </VBox>
             </HBox>
 
-            <HBox spacing="10.0" alignment="CENTER_RIGHT">
-                <Button fx:id="btnGuardar" text="Guardar" onAction="#guardar"/>
-                <Button fx:id="btnCerrar"  text="Cerrar"  onAction="#cerrar"/>
+            <HBox spacing="10.0" alignment="CENTER_LEFT">
+                <Label text="Seleccione una fila para editarla o eliminarla." style="-fx-text-fill: #666666;"/>
+                <Pane HBox.hgrow="ALWAYS"/>
+                <Button fx:id="btnNuevo"    text="Nuevo"    onAction="#nuevo"/>
+                <Button fx:id="btnGuardar"  text="Guardar"  onAction="#guardar"/>
+                <Button fx:id="btnEliminar" text="Eliminar" onAction="#eliminar"/>
+                <Button fx:id="btnCerrar"   text="Cerrar"   onAction="#cerrar"/>
             </HBox>
         </VBox>
     </top>

@@ -34,6 +34,8 @@ public class ProductController {
     @FXML private TableColumn<Product, Integer> colExistencia;
     @FXML private TableColumn<Product, Boolean> colActivo;
 
+    // Producto seleccionado en la tabla; null cuando se está registrando uno nuevo.
+    private Product seleccionado;
     private String rutaImagen;
 
     @FXML
@@ -49,7 +51,15 @@ public class ProductController {
         colActivo.setCellValueFactory(new PropertyValueFactory<>("active"));
 
         tblProductos.setItems(DataStore.productos());
-        chkActivo.setSelected(true);
+        tblProductos.getSelectionModel().selectedItemProperty()
+                .addListener((obs, anterior, producto) -> cargar(producto));
+        nuevo();
+    }
+
+    @FXML
+    private void nuevo() {
+        tblProductos.getSelectionModel().clearSelection();
+        cargar(null);
     }
 
     @FXML
@@ -64,6 +74,12 @@ public class ProductController {
             rutaImagen = archivo.toURI().toString();
             imgProducto.setImage(new Image(rutaImagen));
         }
+    }
+
+    @FXML
+    private void quitarImagen() {
+        rutaImagen = null;
+        imgProducto.setImage(null);
     }
 
     @FXML
@@ -92,16 +108,43 @@ public class ProductController {
         }
 
         String codigo = txtCodigo.getText().trim();
-        if (DataStore.productos().stream().anyMatch(p -> p.getCode().equalsIgnoreCase(codigo))) {
+        boolean repetido = DataStore.productos().stream()
+                .anyMatch(p -> p != seleccionado && p.getCode().equalsIgnoreCase(codigo));
+        if (repetido) {
             mensaje(Alert.AlertType.WARNING, "Ya existe un producto con ese código.");
             return;
         }
 
-        DataStore.productos().add(new Product(DataStore.siguienteId(DataStore.productos(), Product::getId),
-                codigo, txtNombre.getText().trim(), cmbCategoria.getValue(),
-                precio, existencia, rutaImagen, chkActivo.isSelected()));
-        mensaje(Alert.AlertType.INFORMATION, "Producto agregado correctamente.");
-        limpiar();
+        String nombre = txtNombre.getText().trim();
+        if (seleccionado == null) {
+            DataStore.productos().add(new Product(DataStore.siguienteId(DataStore.productos(), Product::getId),
+                    codigo, nombre, cmbCategoria.getValue(),
+                    precio, existencia, rutaImagen, chkActivo.isSelected()));
+            mensaje(Alert.AlertType.INFORMATION, "Producto agregado correctamente.");
+        } else {
+            seleccionado.setCode(codigo);
+            seleccionado.setName(nombre);
+            seleccionado.setCategory(cmbCategoria.getValue());
+            seleccionado.setSalePrice(precio);
+            seleccionado.setStock(existencia);
+            seleccionado.setImagePath(rutaImagen);
+            seleccionado.setActive(chkActivo.isSelected());
+            tblProductos.refresh();
+            mensaje(Alert.AlertType.INFORMATION, "Producto actualizado correctamente.");
+        }
+        nuevo();
+    }
+
+    @FXML
+    private void eliminar() {
+        if (seleccionado == null) {
+            mensaje(Alert.AlertType.WARNING, "Seleccione en la tabla el producto que desea eliminar.");
+            return;
+        }
+        if (Mensajes.confirmar(txtCodigo, "¿Eliminar el producto \"" + seleccionado.getName() + "\"?")) {
+            DataStore.productos().remove(seleccionado);
+            nuevo();
+        }
     }
 
     @FXML
@@ -109,15 +152,28 @@ public class ProductController {
         ScreenManager.mostrarInicio();
     }
 
-    private void limpiar() {
-        txtCodigo.clear();
-        txtNombre.clear();
-        txtPrecio.clear();
-        txtExistencia.clear();
-        cmbCategoria.getSelectionModel().clearSelection();
-        chkActivo.setSelected(true);
-        imgProducto.setImage(null);
-        rutaImagen = null;
+    private void cargar(Product producto) {
+        seleccionado = producto;
+        if (producto == null) {
+            txtCodigo.clear();
+            txtNombre.clear();
+            txtPrecio.clear();
+            txtExistencia.clear();
+            // setValue(null) y no clearSelection(): el valor podría no estar en la lista filtrada.
+            cmbCategoria.setValue(null);
+            chkActivo.setSelected(true);
+            rutaImagen = null;
+        } else {
+            txtCodigo.setText(producto.getCode());
+            txtNombre.setText(producto.getName());
+            // Si la categoría se desactivó después, se muestra igual aunque ya no esté en la lista.
+            cmbCategoria.setValue(producto.getCategory());
+            txtPrecio.setText(producto.getSalePrice().toPlainString());
+            txtExistencia.setText(String.valueOf(producto.getStock()));
+            chkActivo.setSelected(producto.isActive());
+            rutaImagen = producto.getImagePath();
+        }
+        imgProducto.setImage(rutaImagen == null ? null : new Image(rutaImagen, true));
     }
 
     private void mensaje(Alert.AlertType tipo, String texto) {
