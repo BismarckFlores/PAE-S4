@@ -1,10 +1,14 @@
 package com.uam.facturationapp.controller;
 
+import com.uam.facturationapp.data.DataStore;
 import com.uam.facturationapp.util.Mensajes;
 import com.uam.facturationapp.util.ScreenManager;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 
 import java.io.IOException;
@@ -15,9 +19,25 @@ public class MainMenuController {
 
     @FXML private BorderPane contenedor;
 
+    @FXML private Label lblTotalCategorias;
+    @FXML private Label lblTotalProductos;
+    @FXML private Label lblTotalCargos;
+    @FXML private Label lblTotalEmpleados;
+
     @FXML
     private void initialize() {
         ScreenManager.setContenedor(contenedor);
+
+        // Enlazados a las listas compartidas: al volver al menú los totales ya están al día.
+        mostrarTotal(lblTotalCategorias, DataStore.categorias(), "categoría registrada", "categorías registradas");
+        mostrarTotal(lblTotalProductos, DataStore.productos(), "producto registrado", "productos registrados");
+        mostrarTotal(lblTotalCargos, DataStore.cargos(), "cargo registrado", "cargos registrados");
+        mostrarTotal(lblTotalEmpleados, DataStore.empleados(), "empleado registrado", "empleados registrados");
+    }
+
+    @FXML
+    private void irInicio() {
+        ScreenManager.mostrarInicio();
     }
 
     @FXML
@@ -54,5 +74,10 @@ public class MainMenuController {
             Mensajes.mostrar(contenedor, Alert.AlertType.ERROR,
                     "No fue posible abrir " + nombre + ".\n" + e.getMessage());
         }
+    }
+
+    private static void mostrarTotal(Label etiqueta, ObservableList<?> lista, String singular, String plural) {
+        etiqueta.textProperty().bind(Bindings.createStringBinding(
+                () -> lista.size() + " " + (lista.size() == 1 ? singular : plural), lista));
     }
 }

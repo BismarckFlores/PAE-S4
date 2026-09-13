@@ -25,3 +25,69 @@
 #btnSalir:hover .icono {
     -fx-fill: #c62828;
 }
+
+/* Menú principal: tarjetas de acceso a cada módulo. */
+.inicio {
+    -fx-background-color: #f4f6f8;
+}
+
+.inicio-titulo {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #263238;
+}
+
+.inicio-subtitulo {
+    -fx-font-size: 14px;
+    -fx-text-fill: #607d8b;
+}
+
+.inicio-ayuda {
+    -fx-font-size: 12px;
+    -fx-text-fill: #78909c;
+}
+
+.tarjeta {
+    -fx-background-color: white;
+    -fx-background-radius: 8;
+    -fx-border-color: #d5dde2;
+    -fx-border-radius: 8;
+    -fx-padding: 16 20 16 20;
+    -fx-pref-width: 260;
+    -fx-pref-height: 130;
+    -fx-alignment: top-left;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.06), 6, 0, 0, 2);
+}
+
+.tarjeta:hover {
+    -fx-border-color: #1565c0;
+    -fx-effect: dropshadow(gaussian, rgba(21, 101, 192, 0.25), 10, 0, 0, 3);
+}
+
+.tarjeta:pressed {
+    -fx-background-color: #e8f0fb;
+}
+
+.tarjeta .icono {
+    -fx-fill: #37474f;
+}
+
+.tarjeta:hover .icono {
+    -fx-fill: #1565c0;
+}
+
+.tarjeta-titulo {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #263238;
+}
+
+.tarjeta-descripcion {
+    -fx-text-fill: #607d8b;
+}
+
+.tarjeta-total {
+    -fx-font-size: 12px;
+    -fx-text-fill: #1565c0;
+}
