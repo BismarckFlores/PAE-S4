@@ -1,5 +1,7 @@
 package com.uam.facturationapp.controller;
 
+import com.uam.facturationapp.dao.CategoryDao;
+import com.uam.facturationapp.dao.ProductDao;
 import com.uam.facturationapp.data.DataStore;
 import com.uam.facturationapp.util.Mensajes;
 import com.uam.facturationapp.util.ScreenManager;
@@ -14,6 +16,8 @@ import javafx.scene.layout.BorderPane;
 import java.io.IOException;
 
 public class MainMenuController {
+    private final CategoryDao categoryDao = new CategoryDao();
+    private final ProductDao productDao = new ProductDao();
 
     private static final String FXML = "/com/uam/facturationapp/fxml/";
 
@@ -28,9 +32,15 @@ public class MainMenuController {
     private void initialize() {
         ScreenManager.setContenedor(contenedor);
 
-        // Enlazados a las listas compartidas: al volver al menú los totales ya están al día.
-        mostrarTotal(lblTotalCategorias, DataStore.categorias(), "categoría registrada", "categorías registradas");
-        mostrarTotal(lblTotalProductos, DataStore.productos(), "producto registrado", "productos registrados");
+        try {
+            mostrarTotal(lblTotalCategorias, categoryDao.findAll().size(),
+                    "categoría registrada", "categorías registradas");
+            mostrarTotal(lblTotalProductos, productDao.findAll().size(),
+                    "producto registrado", "productos registrados");
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(contenedor, Alert.AlertType.ERROR, e.getMessage());
+        }
+        // Cargos y empleados siguen en memoria: se enlazan para reflejar cambios sin recargar la vista.
         mostrarTotal(lblTotalCargos, DataStore.cargos(), "cargo registrado", "cargos registrados");
         mostrarTotal(lblTotalEmpleados, DataStore.empleados(), "empleado registrado", "empleados registrados");
     }
@@ -79,5 +89,9 @@ public class MainMenuController {
     private static void mostrarTotal(Label etiqueta, ObservableList<?> lista, String singular, String plural) {
         etiqueta.textProperty().bind(Bindings.createStringBinding(
                 () -> lista.size() + " " + (lista.size() == 1 ? singular : plural), lista));
+    }
+
+    private static void mostrarTotal(Label etiqueta, int total, String singular, String plural) {
+        etiqueta.setText(total + " " + (total == 1 ? singular : plural));
     }
 }

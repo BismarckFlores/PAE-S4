@@ -1,6 +1,7 @@
 package com.uam.facturationapp.controller;
 
-import com.uam.facturationapp.data.DataStore;
+import com.uam.facturationapp.dao.CategoryDao;
+import com.uam.facturationapp.dao.ProductDao;
 import com.uam.facturationapp.model.Category;
 import com.uam.facturationapp.model.Product;
 import com.uam.facturationapp.util.Mensajes;
@@ -17,6 +18,9 @@ import java.io.File;
 import java.math.BigDecimal;
 
 public class ProductController {
+
+    private final ProductDao productDao = new ProductDao();
+    private final CategoryDao categoryDao = new CategoryDao();
 
     @FXML private TextField txtCodigo;
     @FXML private TextField txtNombre;
@@ -40,8 +44,8 @@ public class ProductController {
 
     @FXML
     private void initialize() {
-        // Solo se ofrecen las categorías activas registradas en la vista Categorías.
-        cmbCategoria.setItems(new FilteredList<>(DataStore.categorias(), Category::isActive));
+        // Solo se ofrecen las categorías activas.
+        cmbCategoria.setItems(new FilteredList<>(categoryDao.findAll(), Category::isActive));
 
         colCodigo.setCellValueFactory(new PropertyValueFactory<>("code"));
         colNombre.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -50,7 +54,11 @@ public class ProductController {
         colExistencia.setCellValueFactory(new PropertyValueFactory<>("stock"));
         colActivo.setCellValueFactory(new PropertyValueFactory<>("active"));
 
-        tblProductos.setItems(DataStore.productos());
+        try {
+            tblProductos.setItems(productDao.findAll());
+        } catch (RuntimeException e) {
+            mensaje(Alert.AlertType.ERROR, e.getMessage());
+        }
         tblProductos.getSelectionModel().selectedItemProperty()
                 .addListener((obs, anterior, producto) -> cargar(producto));
         nuevo();
@@ -108,7 +116,7 @@ public class ProductController {
         }
 
         String codigo = txtCodigo.getText().trim();
-        boolean repetido = DataStore.productos().stream()
+        boolean repetido = tblProductos.getItems().stream()
                 .anyMatch(p -> p != seleccionado && p.getCode().equalsIgnoreCase(codigo));
         if (repetido) {
             mensaje(Alert.AlertType.WARNING, "Ya existe un producto con ese código.");
@@ -116,21 +124,30 @@ public class ProductController {
         }
 
         String nombre = txtNombre.getText().trim();
-        if (seleccionado == null) {
-            DataStore.productos().add(new Product(DataStore.siguienteId(DataStore.productos(), Product::getId),
-                    codigo, nombre, cmbCategoria.getValue(),
-                    precio, existencia, rutaImagen, chkActivo.isSelected()));
-            mensaje(Alert.AlertType.INFORMATION, "Producto agregado correctamente.");
-        } else {
-            seleccionado.setCode(codigo);
-            seleccionado.setName(nombre);
-            seleccionado.setCategory(cmbCategoria.getValue());
-            seleccionado.setSalePrice(precio);
-            seleccionado.setStock(existencia);
-            seleccionado.setImagePath(rutaImagen);
-            seleccionado.setActive(chkActivo.isSelected());
-            tblProductos.refresh();
-            mensaje(Alert.AlertType.INFORMATION, "Producto actualizado correctamente.");
+        try {
+            if (seleccionado == null) {
+                Product nuevo = new Product(null, codigo, nombre, cmbCategoria.getValue(),
+                        precio, existencia, rutaImagen, chkActivo.isSelected());
+                if (productDao.save(nuevo)) {
+                    tblProductos.getItems().add(nuevo);
+                    mensaje(Alert.AlertType.INFORMATION, "Producto agregado correctamente.");
+                }
+            } else {
+                seleccionado.setCode(codigo);
+                seleccionado.setName(nombre);
+                seleccionado.setCategory(cmbCategoria.getValue());
+                seleccionado.setSalePrice(precio);
+                seleccionado.setStock(existencia);
+                seleccionado.setImagePath(rutaImagen);
+                seleccionado.setActive(chkActivo.isSelected());
+                if (productDao.update(seleccionado.getId(), seleccionado)) {
+                    tblProductos.refresh();
+                    mensaje(Alert.AlertType.INFORMATION, "Producto actualizado correctamente.");
+                }
+            }
+        } catch (RuntimeException e) {
+            mensaje(Alert.AlertType.ERROR, e.getMessage());
+            return;
         }
         nuevo();
     }
@@ -141,9 +158,14 @@ public class ProductController {
             mensaje(Alert.AlertType.WARNING, "Seleccione en la tabla el producto que desea eliminar.");
             return;
         }
-        if (Mensajes.confirmar(txtCodigo, "¿Eliminar el producto \"" + seleccionado.getName() + "\"?")) {
-            DataStore.productos().remove(seleccionado);
-            nuevo();
+        try {
+            if (Mensajes.confirmar(txtCodigo, "¿Eliminar el producto \"" + seleccionado.getName() + "\"?")
+                    && productDao.delete(seleccionado.getId())) {
+                tblProductos.getItems().remove(seleccionado);
+                nuevo();
+            }
+        } catch (RuntimeException e) {
+            mensaje(Alert.AlertType.ERROR, e.getMessage());
         }
     }
 
@@ -159,14 +181,12 @@ public class ProductController {
             txtNombre.clear();
             txtPrecio.clear();
             txtExistencia.clear();
-            // setValue(null) y no clearSelection(): el valor podría no estar en la lista filtrada.
             cmbCategoria.setValue(null);
             chkActivo.setSelected(true);
             rutaImagen = null;
         } else {
             txtCodigo.setText(producto.getCode());
             txtNombre.setText(producto.getName());
-            // Si la categoría se desactivó después, se muestra igual aunque ya no esté en la lista.
             cmbCategoria.setValue(producto.getCategory());
             txtPrecio.setText(producto.getSalePrice().toPlainString());
             txtExistencia.setText(String.valueOf(producto.getStock()));

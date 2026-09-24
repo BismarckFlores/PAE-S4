@@ -1,6 +1,7 @@
 package com.uam.facturationapp.controller;
 
-import com.uam.facturationapp.data.DataStore;
+import com.uam.facturationapp.dao.CategoryDao;
+import com.uam.facturationapp.dao.ProductDao;
 import com.uam.facturationapp.model.Category;
 import com.uam.facturationapp.util.Mensajes;
 import com.uam.facturationapp.util.ScreenManager;
@@ -9,6 +10,9 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 public class CategoryController {
+
+    private final CategoryDao categoryDao = new CategoryDao();
+    private final ProductDao productDao = new ProductDao();
 
     @FXML private TextField txtId;
     @FXML private TextField txtNombre;
@@ -28,7 +32,11 @@ public class CategoryController {
         colNombre.setCellValueFactory(new PropertyValueFactory<>("name"));
         colActivo.setCellValueFactory(new PropertyValueFactory<>("active"));
 
-        tblCategorias.setItems(DataStore.categorias());
+        try {
+            tblCategorias.setItems(categoryDao.findAll());
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(txtNombre, Alert.AlertType.ERROR, e.getMessage());
+        }
         tblCategorias.getSelectionModel().selectedItemProperty()
                 .addListener((obs, anterior, categoria) -> cargar(categoria));
         nuevo();
@@ -48,23 +56,31 @@ public class CategoryController {
             return;
         }
 
-        boolean repetida = DataStore.categorias().stream()
+        boolean repetida = tblCategorias.getItems().stream()
                 .anyMatch(c -> c != seleccionada && c.getName().equalsIgnoreCase(nombre));
         if (repetida) {
             Mensajes.mostrar(txtNombre, Alert.AlertType.WARNING, "Ya existe una categoría con ese nombre.");
             return;
         }
 
-        if (seleccionada == null) {
-            DataStore.categorias().add(new Category(
-                    DataStore.siguienteId(DataStore.categorias(), Category::getId),
-                    nombre, chkActivo.isSelected()));
-            Mensajes.mostrar(txtNombre, Alert.AlertType.INFORMATION, "Categoría agregada correctamente.");
-        } else {
-            seleccionada.setName(nombre);
-            seleccionada.setActive(chkActivo.isSelected());
-            tblCategorias.refresh();
-            Mensajes.mostrar(txtNombre, Alert.AlertType.INFORMATION, "Categoría actualizada correctamente.");
+        try {
+            if (seleccionada == null) {
+                Category nueva = new Category(null, nombre, chkActivo.isSelected());
+                if (categoryDao.save(nueva)) {
+                    tblCategorias.getItems().add(nueva);
+                    Mensajes.mostrar(txtNombre, Alert.AlertType.INFORMATION, "Categoría agregada correctamente.");
+                }
+            } else {
+                seleccionada.setName(nombre);
+                seleccionada.setActive(chkActivo.isSelected());
+                if (categoryDao.update(seleccionada.getId(), seleccionada)) {
+                    tblCategorias.refresh();
+                    Mensajes.mostrar(txtNombre, Alert.AlertType.INFORMATION, "Categoría actualizada correctamente.");
+                }
+            }
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(txtNombre, Alert.AlertType.ERROR, e.getMessage());
+            return;
         }
         nuevo();
     }
@@ -76,15 +92,20 @@ public class CategoryController {
                     "Seleccione en la tabla la categoría que desea eliminar.");
             return;
         }
-        if (DataStore.categoriaEnUso(seleccionada)) {
-            Mensajes.mostrar(txtNombre, Alert.AlertType.WARNING,
-                    "No se puede eliminar: hay productos registrados con esta categoría.\n"
-                            + "Puede desactivarla en su lugar.");
-            return;
-        }
-        if (Mensajes.confirmar(txtNombre, "¿Eliminar la categoría \"" + seleccionada.getName() + "\"?")) {
-            DataStore.categorias().remove(seleccionada);
-            nuevo();
+        try {
+            if (productDao.existeProductoConCategoria(seleccionada.getId())) {
+                Mensajes.mostrar(txtNombre, Alert.AlertType.WARNING,
+                        "No se puede eliminar: hay productos registrados con esta categoría.\n"
+                                + "Puede desactivarla en su lugar.");
+                return;
+            }
+            if (Mensajes.confirmar(txtNombre, "¿Eliminar la categoría \"" + seleccionada.getName() + "\"?")
+                    && categoryDao.delete(seleccionada.getId())) {
+                tblCategorias.getItems().remove(seleccionada);
+                nuevo();
+            }
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(txtNombre, Alert.AlertType.ERROR, e.getMessage());
         }
     }
 
