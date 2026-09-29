@@ -1,14 +1,14 @@
 package com.uam.facturationapp.controller;
 
 import com.uam.facturationapp.dao.CategoryDao;
+import com.uam.facturationapp.dao.EmployeeDao;
+import com.uam.facturationapp.dao.PositionDao;
 import com.uam.facturationapp.dao.ProductDao;
-import com.uam.facturationapp.data.DataStore;
 import com.uam.facturationapp.util.Mensajes;
 import com.uam.facturationapp.util.ScreenManager;
 import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
@@ -18,6 +18,8 @@ import java.io.IOException;
 public class MainMenuController {
     private final CategoryDao categoryDao = new CategoryDao();
     private final ProductDao productDao = new ProductDao();
+    private final PositionDao positionDao = new PositionDao();
+    private final EmployeeDao employeeDao = new EmployeeDao();
 
     private static final String FXML = "/com/uam/facturationapp/fxml/";
 
@@ -31,18 +33,26 @@ public class MainMenuController {
     @FXML
     private void initialize() {
         ScreenManager.setContenedor(contenedor);
+        Node inicio = contenedor.getCenter();
+        contenedor.centerProperty().addListener((obs, anterior, actual) -> {
+            if (actual == inicio) actualizarTotales();
+        });
+        actualizarTotales();
+    }
 
+    private void actualizarTotales() {
         try {
             mostrarTotal(lblTotalCategorias, categoryDao.findAll().size(),
                     "categoría registrada", "categorías registradas");
             mostrarTotal(lblTotalProductos, productDao.findAll().size(),
                     "producto registrado", "productos registrados");
+            mostrarTotal(lblTotalCargos, positionDao.findAll().size(),
+                    "cargo registrado", "cargos registrados");
+            mostrarTotal(lblTotalEmpleados, employeeDao.findAll().size(),
+                    "empleado registrado", "empleados registrados");
         } catch (RuntimeException e) {
             Mensajes.mostrar(contenedor, Alert.AlertType.ERROR, e.getMessage());
         }
-        // Cargos y empleados siguen en memoria: se enlazan para reflejar cambios sin recargar la vista.
-        mostrarTotal(lblTotalCargos, DataStore.cargos(), "cargo registrado", "cargos registrados");
-        mostrarTotal(lblTotalEmpleados, DataStore.empleados(), "empleado registrado", "empleados registrados");
     }
 
     @FXML
@@ -84,11 +94,6 @@ public class MainMenuController {
             Mensajes.mostrar(contenedor, Alert.AlertType.ERROR,
                     "No fue posible abrir " + nombre + ".\n" + e.getMessage());
         }
-    }
-
-    private static void mostrarTotal(Label etiqueta, ObservableList<?> lista, String singular, String plural) {
-        etiqueta.textProperty().bind(Bindings.createStringBinding(
-                () -> lista.size() + " " + (lista.size() == 1 ? singular : plural), lista));
     }
 
     private static void mostrarTotal(Label etiqueta, int total, String singular, String plural) {

@@ -1,6 +1,7 @@
 package com.uam.facturationapp.controller;
 
-import com.uam.facturationapp.data.DataStore;
+import com.uam.facturationapp.dao.EmployeeDao;
+import com.uam.facturationapp.dao.PositionDao;
 import com.uam.facturationapp.model.Employee;
 import com.uam.facturationapp.model.Position;
 import com.uam.facturationapp.util.Mensajes;
@@ -12,6 +13,8 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import java.time.LocalDate;
 
 public class EmployeeController {
+    private final EmployeeDao employeeDao = new EmployeeDao();
+    private final PositionDao positionDao = new PositionDao();
 
     @FXML private TextField txtId;
     @FXML private TextField txtNombres;
@@ -33,8 +36,11 @@ public class EmployeeController {
 
     @FXML
     private void initialize() {
-        // Los cargos son los registrados en la vista Cargos.
-        cmbCargo.setItems(DataStore.cargos());
+        try {
+            cmbCargo.setItems(positionDao.findAll());
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(txtNombres, Alert.AlertType.ERROR, e.getMessage());
+        }
 
         colId.setCellValueFactory(new PropertyValueFactory<>("id"));
         colNombres.setCellValueFactory(new PropertyValueFactory<>("names"));
@@ -43,7 +49,11 @@ public class EmployeeController {
         colFechaContratacion.setCellValueFactory(new PropertyValueFactory<>("hireDate"));
         colActivo.setCellValueFactory(new PropertyValueFactory<>("active"));
 
-        tblEmpleados.setItems(DataStore.empleados());
+        try {
+            tblEmpleados.setItems(employeeDao.findAll());
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(txtNombres, Alert.AlertType.ERROR, e.getMessage());
+        }
         tblEmpleados.getSelectionModel().selectedItemProperty()
                 .addListener((obs, anterior, empleado) -> cargar(empleado));
         nuevo();
@@ -72,19 +82,29 @@ public class EmployeeController {
             return;
         }
 
-        if (seleccionado == null) {
-            DataStore.empleados().add(new Employee(
-                    DataStore.siguienteId(DataStore.empleados(), Employee::getId),
-                    nombres, apellidos, cargo, fecha, chkActivo.isSelected()));
-            Mensajes.mostrar(txtNombres, Alert.AlertType.INFORMATION, "Empleado agregado correctamente.");
-        } else {
-            seleccionado.setNames(nombres);
-            seleccionado.setLastname(apellidos);
-            seleccionado.setPosition(cargo);
-            seleccionado.setHireDate(fecha);
-            seleccionado.setActive(chkActivo.isSelected());
-            tblEmpleados.refresh();
-            Mensajes.mostrar(txtNombres, Alert.AlertType.INFORMATION, "Empleado actualizado correctamente.");
+        try {
+            if (seleccionado == null) {
+                Employee nuevo = new Employee(null, nombres, apellidos, cargo, fecha, chkActivo.isSelected());
+                if (employeeDao.save(nuevo)) {
+                    tblEmpleados.getItems().add(nuevo);
+                    Mensajes.mostrar(txtNombres, Alert.AlertType.INFORMATION, "Empleado agregado correctamente.");
+                }
+            } else {
+                Employee actualizado = new Employee(seleccionado.getId(), nombres, apellidos, cargo,
+                        fecha, chkActivo.isSelected());
+                if (employeeDao.update(seleccionado.getId(), actualizado)) {
+                    seleccionado.setNames(nombres);
+                    seleccionado.setLastname(apellidos);
+                    seleccionado.setPosition(cargo);
+                    seleccionado.setHireDate(fecha);
+                    seleccionado.setActive(chkActivo.isSelected());
+                    tblEmpleados.refresh();
+                    Mensajes.mostrar(txtNombres, Alert.AlertType.INFORMATION, "Empleado actualizado correctamente.");
+                }
+            }
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(txtNombres, Alert.AlertType.ERROR, e.getMessage());
+            return;
         }
         nuevo();
     }
@@ -97,9 +117,14 @@ public class EmployeeController {
             return;
         }
         String nombre = seleccionado.getNames() + " " + seleccionado.getLastname();
-        if (Mensajes.confirmar(txtNombres, "¿Eliminar al empleado " + nombre + "?")) {
-            DataStore.empleados().remove(seleccionado);
-            nuevo();
+        try {
+            if (Mensajes.confirmar(txtNombres, "¿Eliminar al empleado " + nombre + "?")
+                    && employeeDao.delete(seleccionado.getId())) {
+                tblEmpleados.getItems().remove(seleccionado);
+                nuevo();
+            }
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(txtNombres, Alert.AlertType.ERROR, e.getMessage());
         }
     }
 
@@ -121,7 +146,10 @@ public class EmployeeController {
             txtId.setText(String.valueOf(empleado.getId()));
             txtNombres.setText(empleado.getNames());
             txtApellidos.setText(empleado.getLastname());
-            cmbCargo.setValue(empleado.getPosition());
+            cmbCargo.getItems().stream()
+                    .filter(cargo -> cargo.getId().equals(empleado.getPosition().getId()))
+                    .findFirst().ifPresentOrElse(cmbCargo::setValue,
+                            () -> cmbCargo.setValue(empleado.getPosition()));
             dpFechaContratacion.setValue(empleado.getHireDate());
             chkActivo.setSelected(empleado.isActive());
         }

@@ -1,6 +1,7 @@
 package com.uam.facturationapp.controller;
 
-import com.uam.facturationapp.data.DataStore;
+import com.uam.facturationapp.dao.EmployeeDao;
+import com.uam.facturationapp.dao.PositionDao;
 import com.uam.facturationapp.model.Position;
 import com.uam.facturationapp.util.Mensajes;
 import com.uam.facturationapp.util.ScreenManager;
@@ -9,6 +10,8 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 public class PositionController {
+    private final PositionDao positionDao = new PositionDao();
+    private final EmployeeDao employeeDao = new EmployeeDao();
 
     @FXML private TextField txtId;
     @FXML private TextField txtNombre;
@@ -28,7 +31,11 @@ public class PositionController {
         colNombre.setCellValueFactory(new PropertyValueFactory<>("name"));
         colDescripcion.setCellValueFactory(new PropertyValueFactory<>("desc"));
 
-        tblCargos.setItems(DataStore.cargos());
+        try {
+            tblCargos.setItems(positionDao.findAll());
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(txtNombre, Alert.AlertType.ERROR, e.getMessage());
+        }
         tblCargos.getSelectionModel().selectedItemProperty()
                 .addListener((obs, anterior, cargo) -> cargar(cargo));
         nuevo();
@@ -48,7 +55,7 @@ public class PositionController {
             return;
         }
 
-        boolean repetido = DataStore.cargos().stream()
+        boolean repetido = tblCargos.getItems().stream()
                 .anyMatch(c -> c != seleccionado && c.getName().equalsIgnoreCase(nombre));
         if (repetido) {
             Mensajes.mostrar(txtNombre, Alert.AlertType.WARNING, "Ya existe un cargo con ese nombre.");
@@ -56,15 +63,25 @@ public class PositionController {
         }
 
         String descripcion = txtDescripcion.getText().trim();
-        if (seleccionado == null) {
-            DataStore.cargos().add(new Position(
-                    DataStore.siguienteId(DataStore.cargos(), Position::getId), nombre, descripcion));
-            Mensajes.mostrar(txtNombre, Alert.AlertType.INFORMATION, "Cargo agregado correctamente.");
-        } else {
-            seleccionado.setName(nombre);
-            seleccionado.setDesc(descripcion);
-            tblCargos.refresh();
-            Mensajes.mostrar(txtNombre, Alert.AlertType.INFORMATION, "Cargo actualizado correctamente.");
+        try {
+            if (seleccionado == null) {
+                Position nuevo = new Position(null, nombre, descripcion);
+                if (positionDao.save(nuevo)) {
+                    tblCargos.getItems().add(nuevo);
+                    Mensajes.mostrar(txtNombre, Alert.AlertType.INFORMATION, "Cargo agregado correctamente.");
+                }
+            } else {
+                Position actualizado = new Position(seleccionado.getId(), nombre, descripcion);
+                if (positionDao.update(seleccionado.getId(), actualizado)) {
+                    seleccionado.setName(nombre);
+                    seleccionado.setDesc(descripcion);
+                    tblCargos.refresh();
+                    Mensajes.mostrar(txtNombre, Alert.AlertType.INFORMATION, "Cargo actualizado correctamente.");
+                }
+            }
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(txtNombre, Alert.AlertType.ERROR, e.getMessage());
+            return;
         }
         nuevo();
     }
@@ -76,14 +93,19 @@ public class PositionController {
                     "Seleccione en la tabla el cargo que desea eliminar.");
             return;
         }
-        if (DataStore.cargoEnUso(seleccionado)) {
-            Mensajes.mostrar(txtNombre, Alert.AlertType.WARNING,
-                    "No se puede eliminar: hay empleados registrados con este cargo.");
-            return;
-        }
-        if (Mensajes.confirmar(txtNombre, "¿Eliminar el cargo \"" + seleccionado.getName() + "\"?")) {
-            DataStore.cargos().remove(seleccionado);
-            nuevo();
+        try {
+            if (employeeDao.existeEmpleadoConCargo(seleccionado.getId())) {
+                Mensajes.mostrar(txtNombre, Alert.AlertType.WARNING,
+                        "No se puede eliminar: hay empleados registrados con este cargo.");
+                return;
+            }
+            if (Mensajes.confirmar(txtNombre, "¿Eliminar el cargo \"" + seleccionado.getName() + "\"?")
+                    && positionDao.delete(seleccionado.getId())) {
+                tblCargos.getItems().remove(seleccionado);
+                nuevo();
+            }
+        } catch (RuntimeException e) {
+            Mensajes.mostrar(txtNombre, Alert.AlertType.ERROR, e.getMessage());
         }
     }
 
