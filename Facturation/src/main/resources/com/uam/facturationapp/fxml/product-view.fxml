@@ -68,6 +68,16 @@
                 <Button fx:id="btnEliminar" text="Eliminar" onAction="#eliminar"/>
                 <Button fx:id="btnCerrar"   text="Cerrar"   onAction="#cerrar"/>
             </HBox>
+
+            <HBox spacing="10.0" alignment="CENTER_LEFT">
+                <Label text="Buscar:"/>
+                <TextField fx:id="txtBuscar" promptText="Código, nombre o categoría" HBox.hgrow="ALWAYS"/>
+                <Button fx:id="btnLimpiarBusqueda" text="Limpiar búsqueda" onAction="#limpiarBusqueda"/>
+                <Label text="Estado:"/>
+                <ComboBox fx:id="cmbFiltroEstado"/>
+                <Label text="Categoría:"/>
+                <ComboBox fx:id="cmbFiltroCategoria"/>
+            </HBox>
         </VBox>
     </top>
 

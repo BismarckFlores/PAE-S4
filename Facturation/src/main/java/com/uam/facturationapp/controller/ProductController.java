@@ -6,6 +6,8 @@ import com.uam.facturationapp.model.Category;
 import com.uam.facturationapp.model.Product;
 import com.uam.facturationapp.util.Mensajes;
 import com.uam.facturationapp.util.ScreenManager;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -38,6 +40,21 @@ public class ProductController {
     @FXML private TableColumn<Product, Integer> colExistencia;
     @FXML private TableColumn<Product, Boolean> colActivo;
 
+    @FXML private TextField txtBuscar;
+    @FXML private ComboBox<String> cmbFiltroEstado;
+    @FXML private ComboBox<Category> cmbFiltroCategoria;
+
+    private static final String TODOS = "Todos";
+    private static final String ACTIVOS = "Activos";
+    private static final String INACTIVOS = "Inactivos";
+
+    // Opción "Todas" del filtro de categoría (no existe en la BD).
+    private final Category todasCategorias = new Category(null, "Todas", true);
+
+    // ObservableList (todos los productos) -> FilteredList -> TableView
+    private ObservableList<Product> productos = FXCollections.observableArrayList();
+    private FilteredList<Product> productosFiltrados;
+
     // Producto seleccionado en la tabla; null cuando se está registrando uno nuevo.
     private Product seleccionado;
     private String rutaImagen;
@@ -55,10 +72,25 @@ public class ProductController {
         colActivo.setCellValueFactory(new PropertyValueFactory<>("active"));
 
         try {
-            tblProductos.setItems(productDao.findAll());
+            productos = productDao.findAll();
         } catch (RuntimeException e) {
             mensaje(Alert.AlertType.ERROR, e.getMessage());
         }
+        productosFiltrados = new FilteredList<>(productos, p -> true);
+        tblProductos.setItems(productosFiltrados);
+
+        cmbFiltroEstado.setItems(FXCollections.observableArrayList(TODOS, ACTIVOS, INACTIVOS));
+        cmbFiltroEstado.setValue(TODOS);
+
+        ObservableList<Category> categorias = FXCollections.observableArrayList(todasCategorias);
+        categorias.addAll(categoryDao.findAll());
+        cmbFiltroCategoria.setItems(categorias);
+        cmbFiltroCategoria.setValue(todasCategorias);
+
+        // Los tres filtros trabajan juntos: cualquier cambio recalcula el predicado.
+        txtBuscar.textProperty().addListener((obs, a, b) -> aplicarFiltro());
+        cmbFiltroEstado.valueProperty().addListener((obs, a, b) -> aplicarFiltro());
+        cmbFiltroCategoria.valueProperty().addListener((obs, a, b) -> aplicarFiltro());
         tblProductos.getSelectionModel().selectedItemProperty()
                 .addListener((obs, anterior, producto) -> cargar(producto));
         nuevo();
@@ -116,7 +148,7 @@ public class ProductController {
         }
 
         String codigo = txtCodigo.getText().trim();
-        boolean repetido = tblProductos.getItems().stream()
+        boolean repetido = productos.stream()
                 .anyMatch(p -> p != seleccionado && p.getCode().equalsIgnoreCase(codigo));
         if (repetido) {
             mensaje(Alert.AlertType.WARNING, "Ya existe un producto con ese código.");
@@ -129,7 +161,7 @@ public class ProductController {
                 Product nuevo = new Product(null, codigo, nombre, cmbCategoria.getValue(),
                         precio, existencia, rutaImagen, chkActivo.isSelected());
                 if (productDao.save(nuevo)) {
-                    tblProductos.getItems().add(nuevo);
+                    productos.add(nuevo);
                     mensaje(Alert.AlertType.INFORMATION, "Producto agregado correctamente.");
                 }
             } else {
@@ -141,6 +173,7 @@ public class ProductController {
                 seleccionado.setImagePath(rutaImagen);
                 seleccionado.setActive(chkActivo.isSelected());
                 if (productDao.update(seleccionado.getId(), seleccionado)) {
+                    aplicarFiltro();
                     tblProductos.refresh();
                     mensaje(Alert.AlertType.INFORMATION, "Producto actualizado correctamente.");
                 }
@@ -161,12 +194,36 @@ public class ProductController {
         try {
             if (Mensajes.confirmar(txtCodigo, "¿Eliminar el producto \"" + seleccionado.getName() + "\"?")
                     && productDao.delete(seleccionado.getId())) {
-                tblProductos.getItems().remove(seleccionado);
+                productos.remove(seleccionado);
                 nuevo();
             }
         } catch (RuntimeException e) {
             mensaje(Alert.AlertType.ERROR, e.getMessage());
         }
+    }
+
+    @FXML
+    private void limpiarBusqueda() {
+        txtBuscar.clear();
+    }
+
+    private void aplicarFiltro() {
+        String texto = txtBuscar.getText() == null ? "" : txtBuscar.getText().trim().toLowerCase();
+        String estado = cmbFiltroEstado.getValue();
+        Category categoria = cmbFiltroCategoria.getValue();
+
+        productosFiltrados.setPredicate(p -> {
+            if (ACTIVOS.equals(estado) && !p.isActive()) return false;
+            if (INACTIVOS.equals(estado) && p.isActive()) return false;
+            if (categoria != null && categoria != todasCategorias
+                    && !categoria.equals(p.getCategory())) return false;
+
+            if (texto.isEmpty()) return true;
+            return p.getCode().toLowerCase().contains(texto)
+                    || p.getName().toLowerCase().contains(texto)
+                    || (p.getCategory() != null
+                        && p.getCategory().getName().toLowerCase().contains(texto));
+        });
     }
 
     @FXML
